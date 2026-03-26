@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BGM Library</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --bg2: #16161a;
+    --bg3: #1e1e24;
+    --border: #2a2a35;
+    --accent: #7c6aff;
+    --accent2: #ff6ab0;
+    --text: #e8e8f0;
+    --text2: #888899;
+    --text3: #555566;
+    --playing: #6affcc;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.4;
+  }
+
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,13,15,0.93); backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .logo { font-family: 'Space Mono', monospace; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); white-space: nowrap; }
+  .logo span { color: var(--accent2); }
+  .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1; }
+  .search-box {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 14px; color: var(--text); font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.85rem; width: 190px; outline: none; transition: border-color 0.2s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--text3); }
+  .btn {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: 'Noto Sans JP', sans-serif; font-size: 0.82rem;
+    padding: 7px 14px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+  .btn.primary:hover { background: #6a58ee; border-color: #6a58ee; }
+  .count-badge { font-family: 'Space Mono', monospace; font-size: 0.73rem; color: var(--text3); white-space: nowrap; }
+
+  #add-panel {
+    position: relative; z-index: 1; margin: 22px 24px 0;
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .panel-label { font-size: 0.78rem; color: var(--text3); font-family: 'Space Mono', monospace; white-space: nowrap; }
+  .url-input {
+    flex: 1; min-width: 200px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 14px; color: var(--text); font-family: 'Space Mono', monospace;
+    font-size: 0.82rem; outline: none; transition: border-color 0.2s;
+  }
+  .url-input:focus { border-color: var(--accent); }
+  .url-input::placeholder { color: var(--text3); font-family: 'Noto Sans JP', sans-serif; }
+  .title-input {
+    width: 200px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 14px; color: var(--text); font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.85rem; outline: none; transition: border-color 0.2s;
+  }
+  .title-input:focus { border-color: var(--accent); }
+  .title-input::placeholder { color: var(--text3); }
+
+  #tag-bar, #sort-bar { position: relative; z-index: 1; margin: 14px 24px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .bar-label { font-size: 0.72rem; color: var(--text3); font-family: 'Space Mono', monospace; white-space: nowrap; }
+  .tag-chip { padding: 4px 12px; border-radius: 999px; font-size: 0.78rem; cursor: pointer; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); transition: all 0.15s; white-space: nowrap; }
+  .tag-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .tag-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tag-chip.clear-all { border-color: var(--accent2); color: var(--accent2); }
+  .tag-chip.clear-all:hover { background: var(--accent2); color: #fff; }
+  .sort-btn { background: none; border: none; font-size: 0.78rem; color: var(--text3); cursor: pointer; padding: 3px 8px; border-radius: 6px; transition: all 0.15s; font-family: 'Noto Sans JP', sans-serif; }
+  .sort-btn:hover { color: var(--text); background: var(--bg3); }
+  .sort-btn.active { color: var(--accent); background: rgba(124,106,255,0.1); }
+
+  #track-list { position: relative; z-index: 1; margin: 14px 24px 40px; display: flex; flex-direction: column; gap: 6px; }
+
+  .track-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s;
+    animation: slideIn 0.22s ease both;
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  .track-card:hover { border-color: #3a3a4a; }
+  .track-card.playing { border-color: var(--playing); box-shadow: 0 0 18px rgba(106,255,204,0.07); }
+
+  .track-main { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 12px; padding: 12px 14px; }
+
+  .play-btn {
+    width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--border);
+    background: var(--bg3); color: var(--text2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; transition: all 0.15s; flex-shrink: 0;
+  }
+  .play-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .track-card.playing .play-btn { border-color: var(--playing); color: var(--playing); background: rgba(106,255,204,0.08); }
+
+  .track-info { min-width: 0; }
+  .track-name { font-size: 0.92rem; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: color 0.15s; }
+  .track-name:hover { color: var(--accent); }
+  .track-card.playing .track-name { color: var(--playing); }
+  .track-name-input { background: var(--bg); border: 1px solid var(--accent); border-radius: 6px; color: var(--text); font-family: 'Noto Sans JP', sans-serif; font-size: 0.88rem; padding: 3px 8px; outline: none; width: 100%; max-width: 400px; }
+
+  .tags-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+  .tag { padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; border: 1px solid; cursor: pointer; transition: opacity 0.15s; }
+  .tag:hover { opacity: 0.7; }
+  .tag.remove::before { content: '× '; font-size: 0.7rem; }
+  .tag-color-0 { border-color:#7c6aff44; color:#7c6aff; background:#7c6aff11; }
+  .tag-color-1 { border-color:#ff6ab044; color:#ff6ab0; background:#ff6ab011; }
+  .tag-color-2 { border-color:#6affcc44; color:#6affcc; background:#6affcc11; }
+  .tag-color-3 { border-color:#ffcc6a44; color:#ffcc6a; background:#ffcc6a11; }
+  .tag-color-4 { border-color:#6ab0ff44; color:#6ab0ff; background:#6ab0ff11; }
+  .tag-color-5 { border-color:#ff8c6a44; color:#ff8c6a; background:#ff8c6a11; }
+  .tag-color-6 { border-color:#b06aff44; color:#b06aff; background:#b06aff11; }
+  .tag-color-7 { border-color:#6affa844; color:#6affa8; background:#6affa811; }
+
+  .tag-add-btn { background: none; border: 1px dashed var(--border); border-radius: 999px; color: var(--text3); font-size: 0.72rem; padding: 2px 10px; cursor: pointer; transition: all 0.15s; font-family: 'Noto Sans JP', sans-serif; }
+  .tag-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .tag-input-wrap { display: flex; align-items: center; gap: 4px; position: relative; }
+  .tag-input { background: var(--bg); border: 1px solid var(--accent); border-radius: 6px; color: var(--text); font-size: 0.78rem; padding: 2px 8px; outline: none; width: 120px; font-family: 'Noto Sans JP', sans-serif; }
+
+  .ai-btn { background: none; border: 1px solid #7c6aff44; border-radius: 999px; color: #7c6aff; font-size: 0.7rem; padding: 2px 10px; cursor: pointer; transition: all 0.15s; font-family: 'Noto Sans JP', sans-serif; white-space: nowrap; }
+  .ai-btn:hover { background: rgba(124,106,255,0.12); }
+  .ai-btn.loading { opacity: 0.5; cursor: wait; }
+
+  .track-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .delete-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 0.9rem; padding: 4px; border-radius: 4px; transition: color 0.15s; line-height: 1; }
+  .delete-btn:hover { color: #ff6a6a; }
+  .yt-link { font-family: 'Space Mono', monospace; font-size: 0.62rem; color: var(--text3); text-decoration: none; transition: color 0.15s; }
+  .yt-link:hover { color: #ff4444; }
+
+  /* YouTube embed panel */
+  .yt-panel { border-top: 1px solid var(--border); overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
+  .yt-panel.open { max-height: 160px; }
+  .yt-panel iframe { display: block; width: 100%; height: 152px; border: none; }
+
+  /* Tag suggestion dropdown */
+  .tag-suggestions { position: fixed; background: var(--bg3); border: 1px solid var(--accent); border-radius: 8px; padding: 6px; display: flex; flex-wrap: wrap; gap: 5px; z-index: 9999; min-width: 160px; max-width: 300px; box-shadow: 0 8px 32px rgba(0,0,0,0.7); animation: fadeDown 0.12s ease both; }
+  @keyframes fadeDown { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+  .tag-suggestions-label { width: 100%; font-size: 0.65rem; color: var(--text3); font-family: 'Space Mono', monospace; padding: 0 2px 3px; border-bottom: 1px solid var(--border); margin-bottom: 1px; }
+  .tag-suggestion-item { padding: 3px 10px; border-radius: 999px; font-size: 0.74rem; cursor: pointer; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); transition: all 0.12s; white-space: nowrap; }
+  .tag-suggestion-item:hover { border-color: var(--accent); color: var(--accent); background: rgba(124,106,255,0.1); }
+  .tag-suggestion-item.highlight { border-color: var(--accent); color: #fff; background: var(--accent); }
+
+  #empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+  #empty-state .big { font-size: 2.8rem; margin-bottom: 12px; }
+  #empty-state p { font-size: 0.9rem; line-height: 1.9; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 600px) {
+    header, #add-panel, #tag-bar, #sort-bar, #track-list { margin-left: 12px; margin-right: 12px; }
+    .track-main { grid-template-columns: 40px 1fr auto; padding: 10px 12px; }
+    .title-input { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">BGM<span>▶</span>LIB</div>
+  <div class="header-right">
+    <input type="text" class="search-box" id="search-input" placeholder="タイトル・タグ検索...">
+    <button class="btn" onclick="exportData()">エクスポート</button>
+    <button class="btn" onclick="document.getElementById('import-input').click()">インポート</button>
+    <input type="file" id="import-input" accept=".json" style="display:none" onchange="handleImport(event)">
+    <span class="count-badge" id="count-badge">0 tracks</span>
+  </div>
+</header>
+
+<div id="add-panel">
+  <span class="panel-label">＋ ADD</span>
+  <input type="text" class="url-input" id="url-input" placeholder="YouTube URL を貼り付け...">
+  <input type="text" class="title-input" id="title-input" placeholder="タイトル（省略可）">
+  <button class="btn primary" onclick="addTrack()">追加</button>
+</div>
+
+<div id="tag-bar"></div>
+<div id="sort-bar">
+  <span class="bar-label">SORT:</span>
+  <button class="sort-btn active" data-sort="added">追加順</button>
+  <button class="sort-btn" data-sort="name">名前順</button>
+  <button class="sort-btn" data-sort="tags">タグ数順</button>
+</div>
+
+<div id="track-list"></div>
+
+<script>
+let tracks = [];
+let activeTagFilters = new Set();
+let currentSort = 'added';
+let searchQuery = '';
+let tagColorMap = {};
+let tagColorIdx = 0;
+let openEmbedId = null;
+
+// ── YouTube utils ──
+function extractVideoId(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?(?:.*&)?v=)([A-Za-z0-9_-]{11})/,
+    /(?:youtu\.be\/)([A-Za-z0-9_-]{11})/,
+    /(?:youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/,
+    /(?:youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/,
+  ];
+  for (const p of patterns) { const m = url.trim().match(p); if (m) return m[1]; }
+  return null;
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  loadFromStorage();
+  render();
+  document.getElementById('url-input').addEventListener('keydown', e => { if (e.key==='Enter') addTrack(); });
+  document.getElementById('title-input').addEventListener('keydown', e => { if (e.key==='Enter') addTrack(); });
+  document.getElementById('search-input').addEventListener('input', e => { searchQuery = e.target.value.toLowerCase(); render(); });
+  document.querySelectorAll('.sort-btn').forEach(btn => btn.addEventListener('click', () => {
+    currentSort = btn.dataset.sort;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); render();
+  }));
+});
+
+// ── Add track ──
+function addTrack() {
+  const urlEl = document.getElementById('url-input');
+  const titleEl = document.getElementById('title-input');
+  const url = urlEl.value.trim();
+  if (!url) { urlEl.focus(); return; }
+  const vid = extractVideoId(url);
+  if (!vid) { alert('YouTube の URL を正しく入力してください。\n対応: youtube.com/watch?v=... / youtu.be/... / Shorts'); return; }
+  if (tracks.find(t => t.vid === vid)) { alert('その動画はすでに登録されています。'); return; }
+  const name = titleEl.value.trim() || `YouTube — ${vid}`;
+  tracks.unshift({ id: Date.now() + Math.random(), vid, name, tags: [], addedAt: Date.now() });
+  saveToStorage(); render();
+  urlEl.value = ''; titleEl.value = ''; urlEl.focus();
+}
+
+// ── Embed toggle ──
+function toggleEmbed(trackId) {
+  const panel = document.querySelector(`.yt-panel[data-panel="${trackId}"]`);
+  const card  = document.querySelector(`.track-card[data-card="${trackId}"]`);
+  const btn   = document.querySelector(`.play-btn[data-play-btn="${trackId}"]`);
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+
+  // close previous
+  if (openEmbedId && openEmbedId !== trackId) {
+    const pp = document.querySelector(`.yt-panel[data-panel="${openEmbedId}"]`);
+    const pc = document.querySelector(`.track-card[data-card="${openEmbedId}"]`);
+    const pb = document.querySelector(`.play-btn[data-play-btn="${openEmbedId}"]`);
+    if (pp) { pp.classList.remove('open'); pp.innerHTML = ''; }
+    if (pc) pc.classList.remove('playing');
+    if (pb) pb.textContent = '▶';
+  }
+
+  if (isOpen) {
+    panel.classList.remove('open'); panel.innerHTML = '';
+    card.classList.remove('playing'); btn.textContent = '▶';
+    openEmbedId = null;
+  } else {
+    const t = tracks.find(t => t.id === trackId); if (!t) return;
+    panel.innerHTML = `<iframe src="https://www.youtube.com/embed/${t.vid}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    panel.classList.add('open');
+    card.classList.add('playing'); btn.textContent = '⏹';
+    openEmbedId = trackId;
+  }
+}
+
+// ── Tags ──
+function getTagColor(tag) { if (tagColorMap[tag]===undefined) { tagColorMap[tag]=tagColorIdx++%8; } return tagColorMap[tag]; }
+function getAllTags() { const s=new Set(); tracks.forEach(t=>t.tags.forEach(tag=>s.add(tag))); return [...s].sort(); }
+function addTag(trackId, tag) {
+  tag = tag.trim(); if (!tag) return;
+  const t = tracks.find(t=>t.id===trackId);
+  if (t && !t.tags.includes(tag)) { t.tags.push(tag); getTagColor(tag); saveToStorage(); render(); }
+}
+function removeTag(trackId, tag) {
+  const t = tracks.find(t=>t.id===trackId);
+  if (t) { t.tags=t.tags.filter(x=>x!==tag); saveToStorage(); render(); }
+}
+
+// ── AI tags ──
+async function suggestTags(trackId) {
+  const t = tracks.find(t=>t.id===trackId); if (!t) return;
+  const btn = document.querySelector(`[data-ai-btn="${trackId}"]`);
+  if (btn) { btn.classList.add('loading'); btn.textContent='✨ 提案中...'; }
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:200,
+        messages:[{role:"user", content:`BGMのタイトル: "${t.name}"\nこのBGMの雰囲気タグを3〜5個、短い日本語で提案してください（例: 明るい、落ち着く、ポップ、シネマティック、ゲーム風）。\nJSONのみ返答: {"tags":["タグ1","タグ2","タグ3"]}`}]
+      })
+    });
+    const data = await resp.json();
+    const text = (data.content||[]).map(c=>c.text||'').join('');
+    const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+    if (parsed.tags) parsed.tags.forEach(tag=>addTag(trackId, tag));
+  } catch(e) { ['BGM','未分類'].forEach(tag=>addTag(trackId,tag)); }
+  if (btn) { btn.classList.remove('loading'); btn.textContent='✨ AIタグ提案'; }
+}
+
+// ── Edit name ──
+function startEditName(trackId) {
+  const t = tracks.find(t=>t.id===trackId); if (!t) return;
+  const nameEl = document.querySelector(`[data-name="${trackId}"]`); if (!nameEl) return;
+  const input = document.createElement('input');
+  input.type='text'; input.className='track-name-input'; input.value=t.name;
+  const finish = () => { const v=input.value.trim(); if(v){t.name=v; saveToStorage();} render(); };
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', e => { if(e.key==='Enter') input.blur(); if(e.key==='Escape'){input.value=t.name; input.blur();} });
+  nameEl.replaceWith(input); input.focus(); input.select();
+}
+
+// ── Tag input with suggestions ──
+function showTagInput(trackId, btn) {
+  const t = tracks.find(t=>t.id===trackId); if (!t) return;
+  document.querySelectorAll('.tag-suggestions').forEach(el=>el.remove());
+
+  const wrap = document.createElement('span'); wrap.className='tag-input-wrap';
+  const input = document.createElement('input'); input.type='text'; input.className='tag-input'; input.placeholder='タグ名...';
+
+  const dd = document.createElement('div'); dd.className='tag-suggestions'; dd.style.display='none';
+  document.body.appendChild(dd);
+
+  const pos = () => {
+    const r = input.getBoundingClientRect();
+    dd.style.left = r.left+'px';
+    if (window.innerHeight-r.bottom < 200) { dd.style.top='auto'; dd.style.bottom=(window.innerHeight-r.top+4)+'px'; }
+    else { dd.style.bottom='auto'; dd.style.top=(r.bottom+4)+'px'; }
+  };
+
+  let hi=-1, sugg=[];
+  const avail = q => {
+    const all = getAllTags().filter(tag=>!t.tags.includes(tag));
+    if (!q) return all;
+    const lq=q.toLowerCase();
+    return [...all.filter(x=>x.toLowerCase().startsWith(lq)), ...all.filter(x=>!x.toLowerCase().startsWith(lq)&&x.toLowerCase().includes(lq))];
+  };
+  const renderDD = q => {
+    sugg=avail(q); hi=-1;
+    if (!sugg.length) { dd.style.display='none'; return; }
+    dd.innerHTML = `<span class="tag-suggestions-label">過去のタグ</span>`
+      + sugg.map((tag,i)=>`<span class="tag-suggestion-item tag-color-${getTagColor(tag)}" data-idx="${i}">${esc(tag)}</span>`).join('');
+    dd.style.display='flex'; pos();
+  };
+  const pick = tag => { addTag(trackId,tag); input.value=''; renderDD(''); input.focus(); };
+  const close = () => { dd.remove(); const v=input.value.trim(); if(v) addTag(trackId,v); else render(); };
+  const upHL = () => dd.querySelectorAll('.tag-suggestion-item').forEach((el,i)=>el.classList.toggle('highlight',i===hi));
+
+  input.addEventListener('input', ()=>renderDD(input.value.trim()));
+  input.addEventListener('focus', ()=>renderDD(input.value.trim()));
+  window.addEventListener('scroll', pos, {passive:true});
+  dd.addEventListener('mousedown', e => { const item=e.target.closest('.tag-suggestion-item'); if(item){e.preventDefault(); pick(sugg[parseInt(item.dataset.idx)]);} });
+  input.addEventListener('keydown', e => {
+    if (e.key==='ArrowDown'){e.preventDefault(); hi=Math.min(hi+1,sugg.length-1); upHL();}
+    else if (e.key==='ArrowUp'){e.preventDefault(); hi=Math.max(hi-1,-1); upHL();}
+    else if (e.key==='Enter'){hi>=0&&sugg[hi]?(e.preventDefault(),pick(sugg[hi])):input.blur();}
+    else if (e.key==='Escape'){dd.remove(); render();}
+    else if (e.key==='Tab'){const p=sugg[hi>=0?hi:0]; if(p){e.preventDefault();pick(p);}}
+  });
+  input.addEventListener('blur', ()=>setTimeout(()=>{ if(document.activeElement!==input) close(); },150));
+
+  wrap.appendChild(input); btn.replaceWith(wrap); input.focus(); renderDD('');
+}
+
+// ── Render ──
+function getFiltered() {
+  let r = [...tracks];
+  if (searchQuery) r=r.filter(t=>t.name.toLowerCase().includes(searchQuery)||t.tags.some(tag=>tag.toLowerCase().includes(searchQuery)));
+  if (activeTagFilters.size) r=r.filter(t=>[...activeTagFilters].every(f=>t.tags.includes(f)));
+  if (currentSort==='name') r.sort((a,b)=>a.name.localeCompare(b.name,'ja'));
+  else if (currentSort==='tags') r.sort((a,b)=>b.tags.length-a.tags.length);
+  else r.sort((a,b)=>b.addedAt-a.addedAt);
+  return r;
+}
+
+function renderTagBar() {
+  const all = getAllTags();
+  const bar = document.getElementById('tag-bar');
+  if (!all.length) { bar.innerHTML=''; return; }
+  bar.innerHTML = `<span class="bar-label">FILTER:</span>`
+    + (activeTagFilters.size?`<span class="tag-chip clear-all" onclick="clearTagFilters()">✕ クリア</span>`:'')
+    + all.map(tag=>`<span class="tag-chip ${activeTagFilters.has(tag)?'active':''}" onclick="toggleTagFilter('${esc(tag)}')">${esc(tag)}</span>`).join('');
+}
+
+function renderTracks() {
+  const list = document.getElementById('track-list');
+  const filtered = getFiltered();
+  document.getElementById('count-badge').textContent = `${filtered.length} / ${tracks.length} tracks`;
+
+  if (!tracks.length) {
+    list.innerHTML=`<div id="empty-state"><div class="big">🎧</div><p>上の入力欄に YouTube URL を貼り付けて<br>BGMライブラリを作りましょう<br><span style="font-size:0.8rem;color:var(--text3)">データはブラウザに永続保存されます</span></p></div>`;
+    return;
+  }
+  if (!filtered.length) {
+    list.innerHTML=`<div id="empty-state"><div class="big">🔍</div><p>条件に一致するトラックがありません</p></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(t => {
+    const isOpen = openEmbedId===t.id;
+    const tagsHtml = t.tags.map(tag=>`<span class="tag tag-color-${getTagColor(tag)} remove" onclick="removeTag(${t.id},'${esc(tag)}')" title="クリックで削除">${esc(tag)}</span>`).join('');
+    return `
+    <div class="track-card ${isOpen?'playing':''}" data-card="${t.id}">
+      <div class="track-main">
+        <button class="play-btn" data-play-btn="${t.id}" onclick="toggleEmbed(${t.id})">${isOpen?'⏹':'▶'}</button>
+        <div class="track-info">
+          <div class="track-name" data-name="${t.id}" onclick="startEditName(${t.id})" title="クリックで名前編集">${esc(t.name)}</div>
+          <div class="tags-row">
+            ${tagsHtml}
+            <button class="tag-add-btn" onclick="showTagInput(${t.id},this)">＋ タグ</button>
+            <button class="ai-btn" data-ai-btn="${t.id}" onclick="suggestTags(${t.id})">✨ AIタグ提案</button>
+          </div>
+        </div>
+        <div class="track-right">
+          <button class="delete-btn" onclick="deleteTrack(${t.id})" title="削除">✕</button>
+          <a class="yt-link" href="https://www.youtube.com/watch?v=${t.vid}" target="_blank" title="YouTubeで開く">YT↗</a>
+        </div>
+      </div>
+      <div class="yt-panel ${isOpen?'open':''}" data-panel="${t.id}">${isOpen?`<iframe src="https://www.youtube.com/embed/${t.vid}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`:''}</div>
+    </div>`;
+  }).join('');
+}
+
+function render() { renderTagBar(); renderTracks(); }
+
+// ── Filter / delete ──
+function toggleTagFilter(tag) { activeTagFilters.has(tag)?activeTagFilters.delete(tag):activeTagFilters.add(tag); render(); }
+function clearTagFilters() { activeTagFilters.clear(); render(); }
+function deleteTrack(trackId) { if(openEmbedId===trackId) openEmbedId=null; tracks=tracks.filter(t=>t.id!==trackId); saveToStorage(); render(); }
+
+// ── Storage ──
+function saveToStorage() {
+  try { localStorage.setItem('bgmlib_yt_tracks', JSON.stringify(tracks)); localStorage.setItem('bgmlib_yt_colors', JSON.stringify(tagColorMap)); } catch(e){}
+}
+function loadFromStorage() {
+  try {
+    const r=localStorage.getItem('bgmlib_yt_tracks'); if(r) tracks=JSON.parse(r);
+    const c=localStorage.getItem('bgmlib_yt_colors'); if(c){ tagColorMap=JSON.parse(c); tagColorIdx=Math.max(0,...Object.values(tagColorMap))+1; }
+  } catch(e){}
+}
+
+// ── Export / Import ──
+function exportData() {
+  const blob=new Blob([JSON.stringify({tracks,tagColorMap},null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='bgm-library.json'; a.click();
+}
+function handleImport(e) {
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try {
+      const data=JSON.parse(ev.target.result);
+      if(data.tracks){
+        const existing=new Set(tracks.map(t=>t.vid));
+        data.tracks.forEach(t=>{ if(!existing.has(t.vid)) tracks.push(t); else { const f=tracks.find(x=>x.vid===t.vid); if(f) f.tags=t.tags; } });
+        if(data.tagColorMap) Object.assign(tagColorMap,data.tagColorMap);
+        saveToStorage(); render();
+      }
+    } catch { alert('読み込みに失敗しました'); }
+  };
+  reader.readAsText(file); e.target.value='';
+}
+
+// ── Utils ──
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+</script>
+</body>
+</html>
